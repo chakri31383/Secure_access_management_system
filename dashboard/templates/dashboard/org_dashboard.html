@@ -1,0 +1,329 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+{% block content %}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+<style>
+    .dashboard-card {
+        border-radius: 16px;
+        padding: 20px;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        transition: 0.3s ease;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-3px);
+    }
+    .role-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        background:#e3f2fd;
+        color:#0d6efd;
+        font-size:12px;
+    }
+</style>
+
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Organization Dashboard</h2>
+            <div class="text-muted">Manage members, permissions & join requests</div>
+        </div>
+        <a href="{% url 'dashboard_home' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <h6 class="text-muted">Members</h6>
+                <h2 class="fw-bold">{{ students_in_org|length }}</h2>
+                <i class="bi bi-people text-primary fs-1"></i>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <h6 class="text-muted">Pending Requests</h6>
+                <h2 class="fw-bold">{{ pending_requests|length }}</h2>
+                <i class="bi bi-hourglass-split text-warning fs-1"></i>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <h6 class="text-muted">Roles</h6>
+                <h2 class="fw-bold">{{ roles|length }}</h2>
+                <i class="bi bi-shield-check text-success fs-1"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Members list -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    Members ({{ students_in_org|length }})
+                </div>
+                <div class="card-body">
+
+                    {% if students_in_org %}
+                    <ul class="list-group">
+                        {% for m in students_in_org %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+
+                            <div>
+                                <div class="fw-semibold">{{ m.full_name|default:m.email }}</div>
+                                <small class="text-muted">{{ m.email }}</small>
+                            </div>
+
+                            <div class="d-flex gap-2">
+
+                                {% if m.is_blocked %}
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="unblock_user_id" value="{{ m.id }}">
+                                    <button class="btn btn-success btn-sm"
+                                            onclick="return confirm('Unblock user?')">
+                                        <i class="bi bi-unlock"></i>
+                                    </button>
+                                </form>
+
+                                {% else %}
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="block_user_id" value="{{ m.id }}">
+                                    <button class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Block this user? They will be removed from the org.')">
+                                        <i class="bi bi-person-x"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+
+
+
+                            </div>
+
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No members yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right side -->
+        <div class="col-lg-8">
+
+            <!-- Assign Role Form -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold">
+                    Assign Role
+                </div>
+                <div class="card-body">
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="assign_role" value="1">
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Select User</label>
+                                <select name="user_id" class="form-select" required>
+                                    <option value="">-- Choose --</option>
+
+                                    {% for u in students_in_org %}
+                                    <option value="{{ u.id }}">
+                                        {{ u.full_name }} ({{ u.email }})
+                                    </option>
+                                    {% endfor %}
+
+                                    {% for u in students_available %}
+                                    <option value="{{ u.id }}">
+                                        {{ u.full_name }} ({{ u.email }}) - New
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Role Name</label>
+                                <input name="role_name" class="form-control" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Permissions</label>
+                                <div class="d-flex flex-wrap gap-3 mt-1">
+                                    <label><input type="checkbox" name="can_view" value="1"> View</label>
+                                    <label><input type="checkbox" name="can_edit" value="1"> Edit</label>
+                                    <label><input type="checkbox" name="can_delete" value="1"> Delete</label>
+                                    <label><input type="checkbox" name="can_chat" value="1"> Chat</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary">Assign Role</button>
+                    </form>
+
+                </div>
+            </div>
+
+            <!-- Roles Table -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold">
+                    Existing Roles
+                </div>
+                <div class="card-body">
+
+                    {% if roles %}
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Role</th>
+                                <th>View</th>
+                                <th>Edit</th>
+                                <th>Delete</th>
+                                <th>Chat</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for r in roles %}
+                            <tr>
+                                <td>{{ r.name }}</td>
+                                <td>{{ r.can_view|yesno:"Yes,No" }}</td>
+                                <td>{{ r.can_edit|yesno:"Yes,No" }}</td>
+                                <td>{{ r.can_delete|yesno:"Yes,No" }}</td>
+                                <td>{{ r.can_chat|yesno:"Yes,No" }}</td>
+
+                                <td class="text-end">
+
+                                    <!-- Edit Role Modal trigger -->
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editRoleModal{{ r.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    <!-- Delete role -->
+                                    <form method="post" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="delete_role_id" value="{{ r.id }}">
+                                        <button class="btn btn-outline-danger btn-sm"
+                                                onclick="return confirm('Delete this role?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+
+                                </td>
+                            </tr>
+
+                            <!-- Edit Role Modal -->
+                            <div class="modal fade" id="editRoleModal{{ r.id }}">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+
+                                        <form method="post">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="save_edited_role" value="1">
+                                            <input type="hidden" name="edit_role_id" value="{{ r.id }}">
+
+                                            <div class="modal-header">
+                                                <h5>Edit Role</h5>
+                                                <button class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+
+                                            <div class="modal-body">
+                                                <label class="fw-semibold">Role Name</label>
+                                                <input class="form-control mb-3"
+                                                       name="role_name"
+                                                       value="{{ r.name }}">
+
+                                                <label class="fw-semibold">Permissions</label>
+                                                <div class="d-flex flex-wrap gap-3 mt-1">
+                                                    <label><input type="checkbox" name="can_view" value="1" {% if r.can_view %}checked{% endif %}> View</label>
+                                                    <label><input type="checkbox" name="can_edit" value="1" {% if r.can_edit %}checked{% endif %}> Edit</label>
+                                                    <label><input type="checkbox" name="can_delete" value="1" {% if r.can_delete %}checked{% endif %}> Delete</label>
+                                                    <label><input type="checkbox" name="can_chat" value="1" {% if r.can_chat %}checked{% endif %}> Chat</label>
+                                                </div>
+                                            </div>
+
+                                            <div class="modal-footer">
+                                                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button class="btn btn-primary">Save Changes</button>
+                                            </div>
+
+                                        </form>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    {% else %}
+                    <p class="text-muted">No roles defined.</p>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <!-- Pending Requests -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold">
+                    Pending Join Requests
+                </div>
+                <div class="card-body">
+
+                    {% if pending_requests %}
+                    {% for req in pending_requests %}
+                    <div class="border rounded p-3 mb-3">
+
+                        <div class="fw-semibold">{{ req.user.full_name }}</div>
+                        <div class="text-muted small">{{ req.user.email }}</div>
+                        <div class="small text-secondary">Requested: {{ req.created_at }}</div>
+
+                        <div class="mt-2 d-flex gap-2">
+
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="review_request_id" value="{{ req.id }}">
+                                <input type="hidden" name="action" value="accept">
+                                <button class="btn btn-success btn-sm">Accept</button>
+                            </form>
+
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="review_request_id" value="{{ req.id }}">
+                                <input type="hidden" name="action" value="reject">
+                                <button class="btn btn-danger btn-sm">Reject</button>
+                            </form>
+
+                        </div>
+
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted text-center">No pending requests.</p>
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+{% endblock %}

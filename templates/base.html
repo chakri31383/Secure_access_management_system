@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Secure Access{% endblock %}</title>
+
+  {% load static %}
+
+  <!-- BOOTSTRAP -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- MAIN THEME -->
+  <style>
+      /* Sticky footer layout */
+      body {
+          margin: 0;
+          padding: 0;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          background: #f5f7ff;
+          font-family: "Segoe UI", sans-serif;
+      }
+
+      .main-content {
+          flex: 1; /* Push footer to bottom */
+      }
+
+      /* NAVBAR */
+      .navbar-custom {
+          background: white;
+          padding: 15px 25px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      }
+
+      .navbar-custom .nav-link {
+          color: #2d2d2d !important;
+          font-weight: 500;
+      }
+
+      .navbar-custom .nav-link.text-danger {
+          color: #ff4e4e !important;
+      }
+
+      /* FOOTER */
+      footer {
+          background: white;
+          padding: 18px 0;
+          text-align: center;
+          font-size: 15px;
+          color: #4a6cf7;
+          font-weight: 600;
+          box-shadow: 0 -4px 18px rgba(0,0,0,0.06);
+      }
+  </style>
+
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-light navbar-custom">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/" style="color:#4a6cf7;">Secure Portal</a>
+
+        <ul class="navbar-nav ms-auto">
+            {% if user.is_authenticated %}
+                <li class="nav-item"><a href="/dashboard/" class="nav-link">Dashboard</a></li>
+                <li class="nav-item"><a href="/files/list/" class="nav-link">Files</a></li>
+                <li class="nav-item"><a href="/chat/" class="nav-link">Chat</a></li>
+
+                <li class="nav-item"><a href="/logout/" class="nav-link text-danger">Logout</a></li>
+            {% else %}
+                <li class="nav-item"><a href="/login/" class="nav-link">Login</a></li>
+            {% endif %}
+        </ul>
+    </div>
+</nav>
+
+<!-- PAGE CONTENT -->
+<div class="main-content">
+    {% block content %}{% endblock %}
+</div>
+
+<!-- FOOTER -->
+<footer>
+    © 2025 Secure Privileged Access Management System
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

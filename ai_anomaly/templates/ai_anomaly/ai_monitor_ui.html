@@ -1,0 +1,264 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Anomaly Monitor — Demo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { padding: 20px; background:#f8fafc; }
+    .card { border-radius:12px; }
+    .progress { height: 14px; border-radius:10px; overflow:hidden; }
+    .log-box { height: 180px; overflow:auto; background:#0f172a; color:#e6eef8; padding:12px; border-radius:8px; font-family:monospace; font-size:13px; }
+    .controls .form-range { width:100%; }
+    .small-muted { color:#6b7280; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="mb-0">AI Anomaly Monitor — Demo UI</h3>
+      <small class="small-muted">Adjust sliders and click <strong>Detect Anomalies</strong>.</small>
+    </div>
+    <div>
+      <button id="autoTest" class="btn btn-outline-secondary btn-sm me-2">Auto Test</button>
+      <button id="resetBtn" class="btn btn-outline-danger btn-sm">Reset</button>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card p-3 shadow-sm">
+        <h5>User Activity Controls</h5>
+        <p class="small-muted">Each slider ranges 0–60. Threshold for anomaly = <strong>40</strong>.</p>
+
+        <!-- Downloads -->
+        <div class="mb-3 controls">
+          <label class="form-label mb-1">Downloads: <span id="valDownloads">5</span></label>
+          <input id="downloads" type="range" min="0" max="60" value="5" class="form-range">
+          <div class="progress mt-2"><div id="barDownloads" class="progress-bar" role="progressbar" style="width:8%">5</div></div>
+        </div>
+
+        <!-- Files -->
+        <div class="mb-3 controls">
+          <label class="form-label mb-1">Files (uploads): <span id="valFiles">2</span></label>
+          <input id="files" type="range" min="0" max="60" value="2" class="form-range">
+          <div class="progress mt-2"><div id="barFiles" class="progress-bar" role="progressbar" style="width:3%">2</div></div>
+        </div>
+
+        <!-- Failed logins -->
+        <div class="mb-3 controls">
+          <label class="form-label mb-1">Failed logins: <span id="valFails">0</span></label>
+          <input id="fails" type="range" min="0" max="60" value="0" class="form-range">
+          <div class="progress mt-2"><div id="barFails" class="progress-bar bg-danger" role="progressbar" style="width:0%">0</div></div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+          <button id="detectBtn" class="btn btn-primary">Detect Anomalies</button>
+          <button id="blockBtn" class="btn btn-outline-danger" disabled>Simulate Block</button>
+          <div class="ms-auto">
+            <span id="statusBadge" class="badge bg-success">Status: Normal</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card p-3 shadow-sm">
+        <h5>Logs & Actions</h5>
+        <div id="logBox" class="log-box mb-3"></div>
+
+        <div class="d-flex gap-2 mb-2">
+          <button id="copyLogs" class="btn btn-sm btn-outline-secondary">Copy Logs</button>
+          <button id="downloadReport" class="btn btn-sm btn-outline-primary">Download Report</button>
+        </div>
+
+        <h6 class="mt-3">Summary</h6>
+        <ul class="list-group list-group-flush mb-0">
+          <li class="list-group-item d-flex justify-content-between align-items-center">Downloads <span id="sumDownloads" class="badge bg-light text-dark">5</span></li>
+          <li class="list-group-item d-flex justify-content-between align-items-center">Files <span id="sumFiles" class="badge bg-light text-dark">2</span></li>
+          <li class="list-group-item d-flex justify-content-between align-items-center">Failed Logins <span id="sumFails" class="badge bg-light text-dark">0</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+  <div id="toastArea"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Elements
+const downloads = document.getElementById('downloads');
+const files = document.getElementById('files');
+const fails = document.getElementById('fails');
+
+const valDownloads = document.getElementById('valDownloads');
+const valFiles = document.getElementById('valFiles');
+const valFails = document.getElementById('valFails');
+
+const barDownloads = document.getElementById('barDownloads');
+const barFiles = document.getElementById('barFiles');
+const barFails = document.getElementById('barFails');
+
+const detectBtn = document.getElementById('detectBtn');
+const blockBtn = document.getElementById('blockBtn');
+const statusBadge = document.getElementById('statusBadge');
+const logBox = document.getElementById('logBox');
+const toastArea = document.getElementById('toastArea');
+const autoTest = document.getElementById('autoTest');
+const resetBtn = document.getElementById('resetBtn');
+const copyLogs = document.getElementById('copyLogs');
+const downloadReport = document.getElementById('downloadReport');
+
+const sumDownloads = document.getElementById('sumDownloads');
+const sumFiles = document.getElementById('sumFiles');
+const sumFails = document.getElementById('sumFails');
+
+const MAX = 60;
+const THRESHOLD = 40; // threshold for anomaly
+
+function updateBars() {
+  const d = Number(downloads.value);
+  const f = Number(files.value);
+  const fl = Number(fails.value);
+  valDownloads.textContent = d;
+  valFiles.textContent = f;
+  valFails.textContent = fl;
+
+  barDownloads.style.width = Math.round(d / MAX * 100) + '%';
+  barDownloads.textContent = d;
+  barFiles.style.width = Math.round(f / MAX * 100) + '%';
+  barFiles.textContent = f;
+  barFails.style.width = Math.round(fl / MAX * 100) + '%';
+  barFails.textContent = fl;
+
+  sumDownloads.textContent = d;
+  sumFiles.textContent = f;
+  sumFails.textContent = fl;
+}
+
+downloads.addEventListener('input', updateBars);
+files.addEventListener('input', updateBars);
+fails.addEventListener('input', updateBars);
+updateBars();
+
+function pushLog(text) {
+  const ts = new Date().toLocaleString();
+  const line = `[${ts}] ${text}`;
+  const p = document.createElement('div');
+  p.textContent = line;
+  logBox.prepend(p);
+}
+
+function showToast(title, message, variant='primary', delay=3000) {
+  const id = 't' + Date.now();
+  const toastHtml = `
+  <div id="${id}" class="toast align-items-center text-bg-${variant} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body"><strong>${title}</strong><div>${message}</div></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>`;
+  toastArea.insertAdjacentHTML('beforeend', toastHtml);
+  const el = document.getElementById(id);
+  const bs = new bootstrap.Toast(el, { delay });
+  bs.show();
+  // remove after hidden
+  el.addEventListener('hidden.bs.toast', ()=> el.remove());
+}
+
+// Detect anomalies
+function detect() {
+  const d = Number(downloads.value);
+  const f = Number(files.value);
+  const fl = Number(fails.value);
+  pushLog(`Detect called — D:${d} F:${f} FL:${fl}`);
+
+  if (d > THRESHOLD || f > THRESHOLD || fl > THRESHOLD) {
+    // anomaly detected
+    statusBadge.className = 'badge bg-danger';
+    statusBadge.textContent = 'Status: Anomaly Detected';
+    showToast('Anomaly', 'Anomaly detected — user will be blocked (simulated)', 'danger', 4500);
+    pushLog('>>> ANOMALY: user flagged and blocked (simulation)');
+    blockBtn.disabled = false;
+    detectBtn.classList.add('disabled');
+    // visually lock controls
+    downloads.disabled = files.disabled = fails.disabled = true;
+  } else {
+    statusBadge.className = 'badge bg-success';
+    statusBadge.textContent = 'Status: Normal';
+    showToast('OK', 'Behavior within normal limits', 'success', 2200);
+    pushLog('No anomaly detected.');
+    blockBtn.disabled = true;
+  }
+}
+
+// Simulated block action
+blockBtn.addEventListener('click', ()=>{
+  blockBtn.disabled = true;
+  pushLog('Simulated: blocking user... controls disabled.');
+  showToast('Blocked', 'User has been simulated as blocked — controls disabled', 'warning', 3000);
+  detectBtn.disabled = true;
+});
+
+detectBtn.addEventListener('click', (e)=>{ e.preventDefault(); detect(); });
+
+// Auto test: runs a sequence of patterns, shows results
+autoTest.addEventListener('click', ()=>{
+  const patterns = [
+    [5,2,0],
+    [10,5,1],
+    [45,10,2],
+    [3,50,0],
+    [2,1,55],
+    [20,15,10],
+  ];
+  let i=0;
+  pushLog('Auto test started.');
+  showToast('Auto Test', 'Running synthetic patterns...', 'info', 1800);
+  const runNext = ()=>{
+    if (i>=patterns.length) { pushLog('Auto test finished.'); showToast('Auto Test', 'Finished', 'success'); return; }
+    const [d,f,fl]=patterns[i++];
+    downloads.value=d; files.value=f; fails.value=fl; updateBars();
+    detect();
+    setTimeout(runNext, 1000);
+  };
+  runNext();
+});
+
+resetBtn.addEventListener('click', ()=>{
+  downloads.value=5; files.value=2; fails.value=0; updateBars();
+  downloads.disabled = files.disabled = fails.disabled = false;
+  detectBtn.disabled = false; detectBtn.classList.remove('disabled');
+  blockBtn.disabled = true;
+  statusBadge.className = 'badge bg-success'; statusBadge.textContent='Status: Normal';
+  logBox.prepend(document.createElement('div')).textContent = `[${new Date().toLocaleString()}] Reset performed.`;
+  showToast('Reset', 'Controls restored.', 'secondary');
+});
+
+copyLogs.addEventListener('click', ()=>{
+  navigator.clipboard.writeText(logBox.innerText).then(()=> showToast('Copied', 'Logs copied to clipboard','success'), ()=> showToast('Error','Copy failed','danger'));
+});
+
+downloadReport.addEventListener('click', ()=>{
+  const txt = logBox.innerText || 'No logs';
+  const blob = new Blob([txt], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'anomaly_report.txt'; document.body.appendChild(a); a.click();
+  URL.revokeObjectURL(url); a.remove();
+  showToast('Downloaded', 'Report saved', 'success');
+});
+
+// quick initial log
+pushLog('Demo UI initialised.');
+</script>
+</body>
+</html>

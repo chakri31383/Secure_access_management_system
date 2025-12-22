@@ -1,0 +1,26 @@
+{% extends 'accounts/base.html' %}
+{% block content %}
+<h3>Join an Organization</h3>
+
+{% if user_requests %}
+  <h5>Your requests</h5>
+  <ul>
+    {% for r in user_requests %}
+      <li>{{ r.org.name }} — {{ r.status }} {% if r.status == 'pending' %}(requested {{ r.created_at }}){% endif %}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<h5>Available Organizations</h5>
+<form method="post">
+  {% csrf_token %}
+  <select name="org_id" required>
+    <option value="">-- Select Organization --</option>
+    {% for org in orgs %}
+      <option value="{{ org.id }}">{{ org.name }}</option>
+    {% endfor %}
+  </select>
+  <textarea name="message" placeholder="Optional message to org admin"></textarea>
+  <button type="submit" class="btn btn-primary">Request to Join</button>
+</form>
+{% endblock %}

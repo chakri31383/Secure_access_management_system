@@ -1,0 +1,78 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Verify OTP{% endblock %}
+
+{% block content %}
+
+<style>
+    /* Main centered box */
+    .otp-box {
+        max-width: 480px;
+        margin: 60px auto;
+        background: #ffffff;
+        padding: 28px 36px; /* reduced padding */
+        border-radius: 18px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+        text-align: center;
+    }
+
+    .otp-title {
+        font-size: 26px;
+        font-weight: 700;
+        margin-bottom: 6px;  /* reduced */
+        color: #000;
+    }
+
+    .otp-sub {
+        color: #555;
+        margin-bottom: 18px; /* reduced */
+    }
+
+    .otp-input {
+        border-radius: 12px;
+        padding: 12px 14px; /* reduced */
+        font-size: 17px;
+        border: 2px solid #c5d8ff;
+        transition: 0.25s;
+        text-align: center;
+    }
+
+    .otp-input:focus {
+        border-color: #4b8bff;
+        box-shadow: 0 0 0 3px rgba(80,140,255,0.25);
+    }
+
+    /* Blue verify button (smaller height) */
+    .otp-btn {
+        background: linear-gradient(45deg, #0d6efd, #3a87ff);
+        border: none;
+        color: white;
+        width: 100%;
+        padding: 12px;    /* reduced */
+        font-size: 17px;  /* reduced a bit */
+        font-weight: 600;
+        border-radius: 10px;
+        margin-top: 18px; /* reduced */
+        transition: 0.3s;
+        cursor: pointer;
+    }
+
+    .otp-btn:hover {
+        opacity: 0.92;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="otp-box">
+
+    <div class="otp-title">Enter OTP</div>
+    <div class="otp-sub">OTP has been sent to your Gmail</div>
+
+    <form method="POST">{% csrf_token %}
+        <input type="text" name="otp" maxlength="6" class="form-control otp-input mb-3"
+               placeholder="Enter 6–digit OTP" required>
+        <button class="otp-btn">Verify & Login</button>
+    </form>
+
+</div>
+
+{% endblock %}

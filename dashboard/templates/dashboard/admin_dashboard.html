@@ -1,0 +1,167 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Main Admin Dashboard{% endblock %}
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-0">Main Admin Dashboard</h2>
+      <small class="text-muted">Overview of organizations, users, storage and activity logs</small>
+    </div>
+    <div>
+      <a href="{% url 'dashboard:create_org' %}" class="btn btn-success">
+        <i class="bi bi-plus-lg"></i> Create Organization
+      </a>
+
+       <a href="{% url 'ai_anomaly:monitor' %}"
+          class="btn btn-outline-warning btn-sm">🤖 AI Anomaly Monitor
+        </a>
+    </div>
+  </div>
+
+  <!-- Top stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card p-3">
+        <div class="h6">Total Users</div>
+        <div class="fs-4 fw-bold">{{ total_users }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <div class="h6">Active Users</div>
+        <div class="fs-4 fw-bold">{{ active_users }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <div class="h6">Organizations</div>
+        <div class="fs-4 fw-bold">{{ total_orgs }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <div class="h6">Storage Used</div>
+        <div class="fs-6">{{ human_storage_used }} / {{ human_storage_total }}</div>
+        <div class="progress mt-2" style="height:8px">
+          <div class="progress-bar" role="progressbar" style="width: {{ storage_percent }}%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Organizations table -->
+  <div class="card mb-4">
+    <div class="card-header"><strong>Organizations</strong></div>
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Admin</th>
+            <th>Files</th>
+            <th>Storage</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in orgs %}
+          <tr>
+            <td>{{ o.name }}</td>
+            <td>{{ o.admin_email }}</td>
+            <td>{{ o.files_count }}</td>
+            <td>
+              <div class="small">{{ o.human_storage }}</div>
+              <div class="progress" style="height:6px; width:140px;">
+                <div class="progress-bar" role="progressbar" style="width: {{ o.storage_pct }}%"></div>
+              </div>
+            </td>
+            <td class="text-end">
+              <a href="{% url 'dashboard:org_detail' o.id %}" class="btn btn-outline-primary btn-sm me-1">
+                <i class="bi bi-eye"></i>
+              </a>
+
+              <!-- Delete org -->
+              <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="delete_org_id" value="{{ o.id }}">
+                <button class="btn btn-outline-danger btn-sm"
+                        onclick="return confirm('Are you sure you want to delete organization {{ o.name }}? This cannot be undone.')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center">No organizations yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent activity and users -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card mb-3">
+        <div class="card-header"><strong>Recent Activity</strong> <small class="text-muted">({{ logs|length }})</small></div>
+        <div class="card-body small" style="max-height:300px; overflow:auto;">
+          {% if logs %}
+            <ul class="list-unstyled mb-0">
+              {% for log in logs %}
+              <li class="mb-2">
+                {% if log.user %}
+                  {{ log.user.email }}
+                {% else %}
+                  System
+                {% endif %}
+                <div class="text-muted small">{{ log.action }} • {{ log.timestamp|date:"SHORT_DATETIME_FORMAT" }}</div>
+              </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-muted small">No recent activity.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card mb-3">
+        <div class="card-header"><strong>Recent Users</strong></div>
+        <div class="card-body" style="max-height:300px; overflow:auto;">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Name</th><th>Email</th><th>Org</th><th></th></tr></thead>
+            <tbody>
+              {% for u in users %}
+              <tr>
+                <td>{{ u.full_name|default:u.email }}</td>
+                <td>{{ u.email }}</td>
+                <td>{{ u.org_name|default:"—" }}</td>
+                <td class="text-end">
+                  {% if not u.is_blocked %}
+                  <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="block_user_id" value="{{ u.id }}">
+                    <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Block this user?')">Block</button>
+                  </form>
+                  {% else %}
+                  <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="unblock_user_id" value="{{ u.id }}">
+                    <button class="btn btn-sm btn-outline-success">Unblock</button>
+                  </form>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

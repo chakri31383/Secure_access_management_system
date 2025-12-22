@@ -1,0 +1,16 @@
+{% extends 'accounts/base.html' %}
+{% block content %}
+<h3>Make Payment</h3>
+<form>
+  <h5>Pay ₹500 to create your organization</h5>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"
+          data-key="{{ payment.key_id }}"
+          data-amount="{{ payment.amount }}"
+          data-currency="INR"
+          data-order_id="{{ payment.id }}"
+          data-buttontext="Pay Now"
+          data-name="Secure Portal"
+          data-description="Organization Creation Fee"
+          data-theme.color="#528FF0"></script>
+</form>
+{% endblock %}

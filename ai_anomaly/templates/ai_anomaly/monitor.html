@@ -1,0 +1,318 @@
+<!--{% extends "base.html" %}-->
+<!--{% load static %}-->
+<!--{% block title %}AI Anomaly Monitor{% endblock %}-->
+
+<!--{% block content %}-->
+<!--<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">-->
+
+<!--<div class="container py-4">-->
+<!--  <div class="d-flex justify-content-between align-items-start mb-3">-->
+<!--    <div>-->
+<!--      <h2 class="mb-0">AI Anomaly Monitor</h2>-->
+<!--      <small class="text-muted">Overview of user activity & anomaly detections</small>-->
+<!--    </div>-->
+<!--    <div class="d-flex gap-2">-->
+<!--      <form method="post" id="train-form" class="me-2">-->
+<!--        {% csrf_token %}-->
+<!--        <button type="submit" formaction="{% url 'ai_anomaly:train_model' %}" class="btn btn-warning">-->
+<!--          <i class="bi bi-gear-fill"></i> Train / Rebuild Model-->
+<!--        </button>-->
+<!--      </form>-->
+<!--      <form method="get">-->
+<!--        <button type="submit" class="btn btn-outline-primary">Refresh</button>-->
+<!--      </form>-->
+<!--      <a href="{% url 'dashboard:admin_dashboard' %}" class="btn btn-outline-secondary">Back</a>-->
+<!--    </div>-->
+<!--  </div>-->
+
+<!--  &lt;!&ndash; Top cards &ndash;&gt;-->
+<!--  <div class="row g-3 mb-4">-->
+<!--    <div class="col-md-3">-->
+<!--      <div class="card shadow-sm p-3">-->
+<!--        <div class="small text-muted">Tracked users</div>-->
+<!--        <h3 class="mt-2">{{ stats.total_users|default:0 }}</h3>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--    <div class="col-md-3">-->
+<!--      <div class="card shadow-sm p-3">-->
+<!--        <div class="small text-muted">Total activity rows</div>-->
+<!--        <h3 class="mt-2">{{ stats.total_rows|default:0 }}</h3>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--    <div class="col-md-3">-->
+<!--      <div class="card shadow-sm p-3">-->
+<!--        <div class="small text-muted">Model loaded</div>-->
+<!--        <h3 class="mt-2">-->
+<!--          {% if model_loaded %}<span class="text-success">Yes</span>{% else %}<span class="text-danger">No</span>{% endif %}-->
+<!--        </h3>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--    <div class="col-md-3">-->
+<!--      <div class="card shadow-sm p-3">-->
+<!--        <div class="small text-muted">Anomalies flagged (last refresh)</div>-->
+<!--        <h3 class="mt-2 text-danger">{{ stats.anomalies_count|default:0 }}</h3>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </div>-->
+
+<!--  &lt;!&ndash; Controls &ndash;&gt;-->
+<!--  <div class="mb-3">-->
+<!--    <form method="get" class="row g-2">-->
+<!--      <div class="col-auto">-->
+<!--        <input name="q" value="{{ q }}" class="form-control" placeholder="Search user id...">-->
+<!--      </div>-->
+<!--      <div class="col-auto">-->
+<!--        <select name="scope" class="form-select">-->
+<!--          <option value="all" {% if scope == 'all' %}selected{% endif %}>All users</option>-->
+<!--          <option value="anomalies" {% if scope == 'anomalies' %}selected{% endif %}>Only anomalies</option>-->
+<!--        </select>-->
+<!--      </div>-->
+<!--      <div class="col-auto">-->
+<!--        <button class="btn btn-primary">Filter</button>-->
+<!--      </div>-->
+<!--    </form>-->
+<!--  </div>-->
+
+<!--  &lt;!&ndash; Activity table &ndash;&gt;-->
+<!--  <div class="card mb-4 shadow-sm">-->
+<!--    <div class="card-header bg-white">-->
+<!--      <strong>User Activity</strong>-->
+<!--      <small class="text-muted ms-2">({{ activity|length }})</small>-->
+<!--    </div>-->
+
+<!--    <div class="card-body p-0">-->
+<!--      {% if activity %}-->
+<!--      <div class="table-responsive">-->
+<!--        <table class="table table-hover mb-0">-->
+<!--          <thead class="table-light">-->
+<!--            <tr>-->
+<!--              <th>User ID</th>-->
+<!--              <th>Downloads</th>-->
+<!--              <th>Files</th>-->
+<!--              <th>Failed Logins</th>-->
+<!--              <th>Last seen</th>-->
+<!--              <th>Anomaly</th>-->
+<!--              <th>Actions</th>-->
+<!--            </tr>-->
+<!--          </thead>-->
+<!--          <tbody>-->
+<!--            {% for uid, row in activity.items %}-->
+<!--            <tr class="{% if row.anomaly %}table-danger{% endif %}">-->
+<!--              <td>{{ uid }}</td>-->
+<!--              <td>{{ row.downloads }}</td>-->
+<!--              <td>{{ row.files }}</td>-->
+<!--              <td>{{ row.failed_logins }}</td>-->
+<!--              <td>{{ row.time|default:'-' }}</td>-->
+<!--              <td>-->
+<!--                {% if row.anomaly %}-->
+<!--                  <span class="badge bg-danger">ANOMALY</span>-->
+<!--                {% else %}-->
+<!--                  <span class="badge bg-success">normal</span>-->
+<!--                {% endif %}-->
+<!--              </td>-->
+<!--              <td>-->
+<!--                <form method="post" style="display:inline;">-->
+<!--                  {% csrf_token %}-->
+<!--                  <input type="hidden" name="user_id" value="{{ uid }}">-->
+<!--                  <button formaction="{% url 'ai_anomaly:flag_user' uid %}" class="btn btn-sm btn-outline-danger">Block</button>-->
+<!--                </form>-->
+<!--                <a href="{% url 'dashboard:org_detail' uid %}" class="btn btn-sm btn-outline-secondary">User</a>-->
+<!--              </td>-->
+<!--            </tr>-->
+<!--            {% endfor %}-->
+<!--          </tbody>-->
+<!--        </table>-->
+<!--      </div>-->
+<!--      {% else %}-->
+<!--      <div class="p-4 text-muted">No activity recorded yet. Use the generator or wait for users to perform actions.</div>-->
+<!--      {% endif %}-->
+<!--    </div>-->
+<!--  </div>-->
+
+<!--  &lt;!&ndash; Log / train status &ndash;&gt;-->
+<!--  <div class="row">-->
+<!--    <div class="col-md-6">-->
+<!--      <div class="card shadow-sm mb-4">-->
+<!--        <div class="card-header">Train / Model Output</div>-->
+<!--        <div class="card-body">-->
+<!--          <pre style="white-space:pre-wrap">{{ train_output|default:"No recent train output." }}</pre>-->
+<!--        </div>-->
+<!--      </div>-->
+<!--    </div>-->
+
+<!--    <div class="col-md-6">-->
+<!--      <div class="card shadow-sm mb-4">-->
+<!--        <div class="card-header">Quick test</div>-->
+<!--        <div class="card-body">-->
+<!--          <form method="post" class="row gx-2 gy-2">-->
+<!--            {% csrf_token %}-->
+<!--            <input type="hidden" name="test_pattern" value="1">-->
+<!--            <div class="col-12">-->
+<!--              <button formaction="{% url 'ai_anomaly:test_pattern' %}" class="btn btn-outline-primary btn-sm">Run Test Patterns</button>-->
+<!--            </div>-->
+<!--          </form>-->
+<!--          <div class="mt-2 small text-muted">You can generate synthetic activity from the backend to test detection.</div>-->
+<!--        </div>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </div>-->
+<!--</div>-->
+
+<!--&lt;!&ndash; small JS toasts &ndash;&gt;-->
+<!--<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>-->
+<!--<script>-->
+<!--  // display message if passed via context-->
+<!--  {% if messages %}-->
+<!--    {% for m in messages %}-->
+<!--      const toastEl = document.createElement('div');-->
+<!--      toastEl.className = 'toast align-items-center text-bg-{{ m.tags|default:"primary" }} border-0 position-fixed';-->
+<!--      toastEl.style.right = '20px';-->
+<!--      toastEl.style.bottom = (20 + (20 * {{ forloop.counter0 }})) + 'px';-->
+<!--      toastEl.innerHTML = `<div class="d-flex"><div class="toast-body">${{ m }}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;-->
+<!--      document.body.appendChild(toastEl);-->
+<!--      new bootstrap.Toast(toastEl, { delay: 3500 }).show();-->
+<!--    {% endfor %}-->
+<!--  {% endif %}-->
+<!--</script>-->
+<!--{% endblock %}-->
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="container py-4">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="mb-0">AI Anomaly Monitor</h3>
+      <small class="text-muted">
+        Real-time behavioral analysis using machine learning
+      </small>
+    </div>
+    <a href="{% url 'dashboard:admin_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      ← Back to Dashboard
+    </a>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- Controls -->
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5 class="mb-3">User Activity Simulation</h5>
+          <p class="text-muted small">
+            Adjust sliders (0–60). Any value above <strong>40</strong> is treated as abnormal.
+          </p>
+
+          <!-- Downloads -->
+          <label class="form-label">Downloads: <span id="dVal">5</span></label>
+          <input type="range" class="form-range" id="downloads" min="0" max="60" value="5">
+          <div class="progress mb-3">
+            <div id="dBar" class="progress-bar"></div>
+          </div>
+
+          <!-- Files -->
+          <label class="form-label">Files Uploaded: <span id="fVal">2</span></label>
+          <input type="range" class="form-range" id="files" min="0" max="60" value="2">
+          <div class="progress mb-3">
+            <div id="fBar" class="progress-bar bg-info"></div>
+          </div>
+
+          <!-- Failed Logins -->
+          <label class="form-label">Failed Logins: <span id="lVal">0</span></label>
+          <input type="range" class="form-range" id="logins" min="0" max="60" value="0">
+          <div class="progress mb-4">
+            <div id="lBar" class="progress-bar bg-danger"></div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary" onclick="detectAnomaly()">
+              Detect Anomaly
+            </button>
+            <button class="btn btn-outline-danger" onclick="resetUI()">
+              Reset
+            </button>
+            <span id="status" class="badge bg-success ms-auto align-self-center">
+              Normal
+            </span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5 class="mb-3">Detection Logs</h5>
+          <div id="logBox"
+               style="height:260px;overflow:auto;background:#0f172a;color:#e5e7eb;
+               font-family:monospace;font-size:13px;padding:12px;border-radius:8px;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const THRESHOLD = 40;
+
+function updateBars() {
+  const d = downloads.value;
+  const f = files.value;
+  const l = logins.value;
+
+  dVal.innerText = d;
+  fVal.innerText = f;
+  lVal.innerText = l;
+
+  dBar.style.width = (d/60*100)+'%';
+  fBar.style.width = (f/60*100)+'%';
+  lBar.style.width = (l/60*100)+'%';
+}
+
+downloads.oninput = files.oninput = logins.oninput = updateBars;
+updateBars();
+
+function log(msg){
+  const t = new Date().toLocaleTimeString();
+  logBox.innerHTML = `[${t}] ${msg}<br>` + logBox.innerHTML;
+}
+
+function detectAnomaly(){
+  const d = downloads.value;
+  const f = files.value;
+  const l = logins.value;
+
+  log(`Checking: D=${d}, F=${f}, FL=${l}`);
+
+  if(d>THRESHOLD || f>THRESHOLD || l>THRESHOLD){
+    status.innerText = "ANOMALY";
+    status.className = "badge bg-danger";
+    log("🚨 Anomaly detected → User blocked (simulated)");
+    downloads.disabled = files.disabled = logins.disabled = true;
+  } else {
+    status.innerText = "Normal";
+    status.className = "badge bg-success";
+    log("✅ Normal behavior");
+  }
+}
+
+function resetUI(){
+  downloads.value = 5;
+  files.value = 2;
+  logins.value = 0;
+  downloads.disabled = files.disabled = logins.disabled = false;
+  status.innerText = "Normal";
+  status.className = "badge bg-success";
+  updateBars();
+  log("Reset performed");
+}
+</script>
+
+{% endblock %}

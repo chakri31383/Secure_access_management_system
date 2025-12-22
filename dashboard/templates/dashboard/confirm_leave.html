@@ -1,0 +1,9 @@
+{% extends 'accounts/base.html' %}
+{% block content %}
+<h3>Leave {{ org.name }}</h3>
+<p>Are you sure you want to leave this organization? Your uploaded private files will remain but you will lose organization access.</p>
+<form method="post">{% csrf_token %}
+  <button class="btn btn-danger">Yes, Leave</button>
+  <a class="btn btn-secondary" href="{% url 'dashboard_home' %}">Cancel</a>
+</form>
+{% endblock %}

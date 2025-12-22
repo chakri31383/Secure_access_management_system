@@ -1,0 +1,269 @@
+{% extends 'accounts/base.html' %}
+{% block content %}
+
+<!-- optional icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+<style>
+/* Page layout */
+.user-dashboard {
+  padding: 28px 18px;
+}
+
+/* Cards row */
+.stats-row { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:22px; }
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+  min-width: 220px;
+  flex: 1 1 220px;
+}
+.stat-card .label { font-size:13px; color:#6b7280; }
+.stat-card .value { font-size:22px; font-weight:700; margin-top:6px; }
+
+/* Action area */
+.actions-row { display:flex; gap:12px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
+.btn-primary-lg { background:#2563eb; border-color:#2563eb; padding:10px 18px; border-radius:10px; color:white; font-weight:600; }
+.btn-outline { background:white; border:1px solid #e6eefb; color:#2563eb; padding:8px 14px; border-radius:10px; }
+
+/* panels */
+.panel {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(16,24,40,0.04);
+  margin-bottom: 16px;
+}
+
+/* file card */
+.file-card {
+  border-radius: 10px;
+  border:1px solid #eef2ff;
+  padding:12px;
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  background:#fcfdff;
+}
+.file-card .meta { font-size:13px; color:#374151; }
+.file-card .actions { margin-top:8px; }
+
+/* request badge */
+.badge-pending { background:#fffaeb; color:#92400e; padding:6px 10px; border-radius:999px; font-weight:600; }
+
+/* small table tweaks */
+.table-small th, .table-small td { padding:.5rem .75rem; vertical-align: middle; }
+
+/* responsive */
+@media (max-width:800px){
+  .stats-row { flex-direction:column; }
+  .actions-row { flex-direction:column; align-items:stretch; }
+}
+</style>
+
+<div class="user-dashboard container">
+
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h2 class="mb-0">Welcome, {{ request.user.full_name }}</h2>
+      <small class="text-muted">Dashboard overview</small>
+    </div>
+
+    <div class="text-end">
+      {% if user_org %}
+        <div class="text-end">
+          <small class="text-muted d-block">Member of</small>
+          <strong>{{ user_org.name }}</strong>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="label"><i class="bi bi-file-earmark-text me-2"></i> Files uploaded</div>
+      <div class="value">{{ user_files_count|default:0 }}</div>
+      <div class="text-muted" style="font-size:12px;margin-top:6px;">Files you have uploaded</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="label"><i class="bi bi-person-plus me-2"></i> Join requests</div>
+      <div class="value">{{ user_requests|length }}</div>
+      <div class="text-muted" style="font-size:12px;margin-top:6px;">
+        Pending: {{ user_requests|dictsortreversed:"created_at"|length|default:0 }}
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="label"><i class="bi bi-clock-history me-2"></i> Recent activity</div>
+      <div class="value">{{ recent_logs|length|default:"0" }}</div>
+      <div class="text-muted" style="font-size:12px;margin-top:6px;">Actions on your account</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="label"><i class="bi bi-person-check me-2"></i> Organization status</div>
+      <div class="value">
+        {% if user_org %}
+          Member
+        {% elif has_pending %}
+          <span class="badge-pending">Pending</span>
+        {% else %}
+          Not member
+        {% endif %}
+      </div>
+      <div class="text-muted" style="font-size:12px;margin-top:6px;">Join/Leave controls below</div>
+    </div>
+  </div>
+
+  <!-- ACTIONS (JOIN / LEAVE / UPLOAD) -->
+  <div class="actions-row mb-4">
+    {% if user_org %}
+      <form method="post" action="{% url 'dashboard:leave_org' %}">
+        {% csrf_token %}
+        <button class="btn btn-danger">Leave Organization</button>
+      </form>
+    {% elif can_request_join %}
+      <a href="{% url 'dashboard:join_org' %}" class="btn btn-primary-lg">Join an Organization</a>
+    {% elif has_pending %}
+      <a href="{% url 'dashboard:join_org' %}" class="btn btn-outline" title="View your requests">View Pending Request</a>
+    {% else %}
+      <a href="{% url 'dashboard:join_org' %}" class="btn btn-primary-lg">Request to Join</a>
+    {% endif %}
+
+    <a href="{% url 'files:upload' %}" class="btn btn-outline">Upload File</a>
+    <a href="{% url 'files:list' %}" class="btn btn-outline">View Files</a>
+  </div>
+
+  <!-- MAIN ROW: Left - Files / Upload; Right - Requests & Activity -->
+  <div class="row g-3">
+    <div class="col-lg-8">
+
+      <div class="panel">
+        <h5 class="mb-3">Your Files</h5>
+
+        {% if user_files_count|default:0 > 0 %}
+          {# If you pass a 'user_files' queryset, loop through it. Fallback: show count only #}
+          <div class="mb-2">
+            {% if user_files %}
+              {% for f in user_files %}
+                <div class="file-card mb-2">
+                  <div style="width:56px;height:56px;border-radius:8px;background:#eef2ff;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-file-earmark-text" style="font-size:22px;color:#2563eb"></i>
+                  </div>
+                  <div style="flex:1;">
+                    <div style="font-weight:600;">{{ f.filename }}</div>
+                    <div class="meta text-muted">By {{ f.owner.full_name }} · {{ f.created_at|date:"M d" }}</div>
+                    <div class="actions mt-2">
+                      <a href="{% url 'files:download' f.id %}" class="btn btn-sm btn-outline-success">Download</a>
+                      <a href="{% url 'files:edit' f.id %}" class="btn btn-sm btn-outline-secondary ms-1">Edit</a>
+                      <form method="post" action="{% url 'files:delete' f.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-danger ms-1" onclick="return confirm('Delete file?')">Delete</button>
+                      </form>
+                    </div>
+                  </div>
+                  <div style="align-self:center;">
+                    <button class="btn btn-sm" title="Favorite"><i class="bi bi-heart"></i></button>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-muted">We have {{ user_files_count|default:0 }} files on record — browse the files page to view them.</p>
+            {% endif %}
+          </div>
+
+          <div class="mt-3">
+            <a class="btn btn-outline" href="{% url 'files:list' %}">Open file manager</a>
+          </div>
+
+        {% else %}
+          <div class="text-center py-6">
+            <i class="bi bi-folder-plus" style="font-size:38px;color:#93c5fd"></i>
+            <h5 class="mt-2">No files uploaded yet</h5>
+            <p class="text-muted">Use the Upload button to store files securely. You can keep files private or share them with your organization.</p>
+            <div class="mt-3">
+              <a href="{% url 'files:upload' %}" class="btn btn-primary-lg me-2">Upload your first file</a>
+              <a href="{% url 'files:list' %}" class="btn btn-outline">Browse files</a>
+            </div>
+          </div>
+        {% endif %}
+
+      </div>
+
+      <div class="panel">
+        <h5 class="mb-3">Recent Activity</h5>
+        {% if recent_logs %}
+          <table class="table table-striped table-small">
+            <thead>
+              <tr><th>When</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              {% for l in recent_logs %}
+                <tr>
+                  <td style="white-space:nowrap">{{ l.timestamp|date:"SHORT_DATETIME_FORMAT" }}</td>
+                  <td>{{ l.action }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="text-muted">No recent activity recorded.</p>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <div class="col-lg-4">
+
+      <div class="panel">
+        <h5 class="mb-3">Your Requests</h5>
+
+        {% if user_requests %}
+          <ul class="list-group">
+            {% for r in user_requests %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div style="font-weight:600">{{ r.org.name }}</div>
+                  <small class="text-muted">{{ r.created_at|date:"SHORT_DATETIME_FORMAT" }}</small>
+                </div>
+                <div>
+                  {% if r.status == 'pending' %}
+                    <span class="badge-pending">Pending</span>
+                  {% elif r.status == 'accepted' %}
+                    <span class="badge bg-success">Accepted</span>
+                  {% else %}
+                    <span class="badge bg-danger">Rejected</span>
+                  {% endif %}
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted">You have no join requests.</p>
+        {% endif %}
+
+        <div class="mt-3 text-center">
+          {% if can_request_join %}
+            <a class="btn btn-primary-lg" href="{% url 'dashboard:join_org' %}">Request to join an organization</a>
+          {% elif has_pending %}
+            <a class="btn btn-outline" href="{% url 'dashboard:join_org' %}">View request status</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h5 class="mb-3">Quick Links</h5>
+        <a class="d-block mb-2" href="{% url 'files:list' %}"><i class="bi bi-folder2-open me-2"></i> Browse organization files</a>
+        <a class="d-block mb-2" href="{% url 'chat:chat_room' %}"><i class="bi bi-chat-dots me-2"></i> Organization chat</a>
+        <a class="d-block" href="{% url 'dashboard_home' %}"><i class="bi bi-speedometer2 me-2"></i> Dashboard home</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

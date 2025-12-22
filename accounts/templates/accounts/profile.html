@@ -1,0 +1,109 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Your Profile{% endblock %}
+
+{% block content %}
+
+<style>
+/* Page background */
+.profile-bg {
+    background: white; /* soft beige/pink like reference */
+    min-height: 100vh;
+    padding-top: 40px;
+}
+
+/* Main white card */
+.profile-card {
+    background: white;
+    width: 420px;
+    margin: auto;
+    padding: 40px 35px;
+    border-radius: 25px;
+    box-shadow: 0px 10px 40px rgba(0,0,0,0.15);
+}
+
+/* Avatar image */
+.profile-avatar {
+    width: 95px;
+    height: 95px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    margin: -70px auto 15px auto;
+    border: 4px solid white;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Section heading */
+.section-title {
+    font-weight: 700;
+    margin-bottom: 15px;
+    font-size: 22px;
+}
+
+/* Input Fields */
+.profile-card input,
+.profile-card select {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    font-size: 15px;
+}
+
+/* Save Button */
+.save-btn {
+    width: 100%;
+    background: #0d6efd;
+    padding: 12px;
+    border-radius: 25px;
+    color: white;
+    font-weight: 600;
+    border: none;
+    margin-top: 14px;
+    transition: 0.25s;
+}
+
+.save-btn:hover {
+    background: #0b58d1;
+}
+
+/* Password section spacing */
+.password-section {
+    margin-top: 30px;
+}
+
+</style>
+
+<div class="profile-bg">
+
+    <div class="profile-card">
+
+        <!-- Avatar -->
+        <img src="https://cdn.prod.website-files.com/63c6afda65da4a4349967d76/685e86e43d5103c88eb98836_home_hero-secure_password_files.png" class="profile-avatar">
+
+        <!-- Heading -->
+        <h3 class="text-center mb-4">Edit Profile</h3>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Profile Section -->
+            <div>
+                <h4 class="section-title">Update Profile</h4>
+                {{ profile_form.as_p }}
+            </div>
+
+            <!-- Password Section -->
+            <div class="password-section">
+                <h4 class="section-title">Change Password</h4>
+                {{ password_form.as_p }}
+            </div>
+
+            <button type="submit" class="save-btn">Save Changes</button>
+        </form>
+    </div>
+
+</div>
+
+{% endblock %}

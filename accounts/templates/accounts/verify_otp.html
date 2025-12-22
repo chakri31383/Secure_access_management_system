@@ -1,0 +1,10 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Verify OTP{% endblock %}
+{% block content %}
+<h3>Email Verification</h3>
+<form method="POST">{% csrf_token %}
+  <input type="email" name="email" class="form-control mb-2" placeholder="Email" required>
+  <input type="text" name="otp" class="form-control mb-2" placeholder="OTP" required>
+  <button class="btn btn-primary">Verify</button>
+</form>
+{% endblock %}

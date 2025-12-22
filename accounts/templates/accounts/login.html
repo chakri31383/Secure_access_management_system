@@ -1,0 +1,110 @@
+{% extends "accounts/base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+
+<style>
+
+/* Background Layout */
+.auth-wrapper {
+    background: white;
+    min-height: 85vh;
+    padding-top: 40px;
+}
+
+/* Login Card Styling */
+.auth-card {
+    background: white;
+    width: 420px;
+    margin: auto;
+    padding: 40px 35px;
+    border-radius: 25px;
+    box-shadow: 0px 10px 40px rgba(0,0,0,0.15);
+    animation: fadeIn 0.4s ease;
+}
+
+/* Heading */
+.auth-card h3 {
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+/* Input Styling */
+.auth-card input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #f3f6ff;
+}
+
+/* Login Button (Matches Signup Button) */
+.btn-theme {
+    width: 100%;
+    background: #4a6cf7;
+    padding: 12px;
+    border-radius: 25px;
+    color: white;
+    font-weight: 600;
+    border: none;
+    margin-top: 10px;
+    transition: 0.25s;
+}
+
+.btn-theme:hover {
+    background: #3c56d6;
+    transform: translateY(-2px);
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+</style>
+
+<div class="auth-wrapper">
+
+    <div class="auth-card">
+
+        <h3>Welcome Back</h3>
+        <p class="text-muted text-center mb-4">Please log in to your account</p>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label">Email Address</label>
+                {{ form.email }}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                {{ form.password }}
+            </div>
+
+            <button class="btn-theme">Login</button>
+
+            <div class="text-center mt-3">
+                <a href="{% url 'request_password_reset' %}" style="color:#4a6cf7; font-weight:600;">
+                    Forgot Password?
+                </a>
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="{% url 'signup' %}" style="color:#4a6cf7; font-weight:600;">
+                    Create Account
+                </a>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

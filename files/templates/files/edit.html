@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-4">
+  <h3>Edit File</h3>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Filename</label>
+      <input type="text" name="title" class="form-control" value="{{ file.filename }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Description</label>
+      <textarea name="description" class="form-control" rows="4">{{ file.description }}</textarea>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Replace file (optional)</label>
+      <input type="file" name="file" class="form-control">
+    </div>
+
+    <button class="btn btn-primary">Save</button>
+    <a href="{% url 'files:list' %}" class="btn btn-secondary ms-2">Cancel</a>
+  </form>
+</div>
+{% endblock %}

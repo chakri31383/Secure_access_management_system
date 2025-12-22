@@ -1,0 +1,50 @@
+{% extends 'accounts/base.html' %}
+{% block content %}
+
+<style>
+    .access-card {
+        max-width: 480px;
+        width: 100%;
+        background: #ffffff;
+        border-radius: 18px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        transition: all 0.3s ease;
+    }
+
+    .access-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+    }
+</style>
+
+<div class="container mt-5 d-flex justify-content-center">
+    <div class="p-4 access-card">
+
+        <div class="text-center">
+
+            <!-- Title -->
+            <h3 class="fw-bold mb-2" style="color: #d62828;">Chat Access Denied</h3>
+
+            <!-- Description -->
+            <p class="mb-4" style="font-size: 15px; color: #415a77;">
+                Your organization admin must approve chat access before you can continue.
+            </p>
+
+            <!-- Button Back -->
+            <a href="{% url 'dashboard_home' %}"
+               class="btn"
+               style="
+                   background: #4A6CF7;
+                   color: white;
+                   border-radius: 12px;
+                   padding: 10px 25px;
+               ">
+               Go Back to Dashboard
+            </a>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

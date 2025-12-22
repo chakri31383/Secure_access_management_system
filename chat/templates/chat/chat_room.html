@@ -1,0 +1,134 @@
+{% extends 'accounts/base.html' %}
+{% block content %}
+<!-- Chat Room - Updated Professional UI -->
+<style>
+/* ===== Chat CSS (inline for easy copy-paste) ===== */
+.chat-wrapper { max-width: 1000px; margin: 0 auto; }
+.h3-chat { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.h3-chat h3 { margin:0; }
+
+.chat-form { background: transparent; padding: .5rem; border-radius: .5rem; }
+.chat-form .form-select, .chat-form .form-control { height: calc(2.4rem + 2px); }
+
+.chat-container { height: 60vh; max-height: 720px; overflow: hidden; border-radius: .6rem; box-shadow: 0 6px 20px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.06); }
+.chat-box { overflow-y: auto; height: calc(60vh - 1rem); padding: 1rem; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
+
+.message-row { align-items: flex-end; }
+.avatar, .you-avatar { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; background: #e9ecef; color: #333; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.you-avatar { background: #0d6efd; color: #fff; }
+
+.message { max-width: 78vw; word-wrap: break-word; line-height: 1.35; font-size: 0.95rem; }
+.message.sent { background: #0d6efd; color: #fff; border-radius: 14px 14px 6px 14px; }
+.message.received { background: #f1f3f5; color: #212529; border-radius: 14px 14px 14px 6px; border: 1px solid rgba(0,0,0,0.03); }
+
+.message-meta { font-size: 0.78rem; color: #6c757d; }
+
+.chat-actions { display:flex; gap:.5rem; align-items:center; }
+
+.chat-box::-webkit-scrollbar { width: 9px; }
+.chat-box::-webkit-scrollbar-track { background: transparent; }
+.chat-box::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+
+@media (min-width: 992px) { .message { max-width: 55vw; } }
+
+.form-select:focus, .form-control:focus, button:focus { box-shadow: 0 0 0 .15rem rgba(13,110,253,0.15); outline: none; }
+
+</style>
+
+<div class="chat-wrapper">
+  <div class="h3-chat mb-3">
+    <h3>Chat Room</h3>
+    <small class="text-muted">Tip: Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send</small>
+  </div>
+
+  <form method="POST" class="chat-form mb-3" id="chatForm">
+    {% csrf_token %}
+    <div class="row g-2 align-items-center">
+      <div class="col-sm-5 col-md-4">
+        <select name="receiver" class="form-select form-select-sm">
+          <option value="">-- Choose recipient --</option>
+          <option value="all">All Members (organization)</option>
+          {% if request.user.role == 'OrgAdmin' %}
+            <option value="mainadmin">Main Admins</option>
+          {% endif %}
+          {% for u in users %}
+            <option value="{{ u.id }}">{{ u.full_name }} ({{ u.email }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-sm-7 col-md-6">
+        <textarea name="message" id="messageInput" class="form-control form-control-sm" rows="2" placeholder="Type a message..." required></textarea>
+      </div>
+
+      <div class="col-auto">
+        <div class="chat-actions">
+          <button class="btn btn-success btn-sm" id="sendBtn">Send</button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="chat-container card">
+    <div class="card-body chat-box" id="chatBox" aria-live="polite">
+      {% for m in msgs %}
+        <div class="message-row d-flex mb-3 {% if m.sender == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
+
+          {% if m.sender != request.user %}
+            <div class="avatar me-2">{{ m.sender.full_name|slice:":1"|upper }}</div>
+          {% endif %}
+
+          <div class="message-block">
+            <div class="message-meta small text-muted mb-1">
+              <strong class="me-1">{{ m.sender.full_name }}</strong>
+              <span class="text-truncate d-inline-block" style="max-width:220px">{{ m.sender.email }}</span>
+              <span class="ms-2">• {{ m.timestamp|date:"M d, Y, H:i" }}</span>
+
+              {% if m.receiver %}
+                <span class="badge bg-secondary ms-2">to {{ m.receiver.full_name }}</span>
+              {% elif m.is_to_mainadmin %}
+                <span class="badge bg-info text-dark ms-2">to MainAdmin</span>
+              {% else %}
+                <span class="badge bg-primary ms-2">to All</span>
+              {% endif %}
+            </div>
+
+            <div class="message p-2 rounded {% if m.sender == request.user %}sent{% else %}received{% endif %}">
+              {{ m.message|linebreaksbr }}
+            </div>
+          </div>
+
+          {% if m.sender == request.user %}
+            <div class="avatar ms-2 you-avatar">You</div>
+          {% endif %}
+
+        </div>
+      {% empty %}
+        <p class="text-muted">No messages yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Small JS: auto-scroll and keyboard shortcut -->
+<script>
+  (function(){
+    const cb = document.getElementById('chatBox');
+    if (cb) cb.scrollTop = cb.scrollHeight;
+
+    // Ctrl+Enter to submit
+    const msgInput = document.getElementById('messageInput');
+    const form = document.getElementById('chatForm');
+    if (msgInput && form) {
+      msgInput.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          // if input not empty, submit
+          if (msgInput.value.trim().length) form.submit();
+        }
+      });
+    }
+  })();
+</script>
+
+{% endblock %}

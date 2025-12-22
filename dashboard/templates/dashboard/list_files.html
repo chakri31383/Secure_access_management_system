@@ -1,0 +1,41 @@
+{% extends 'accounts/base.html' %}
+{% block content %}
+<h3>{{ title }}</h3>
+
+{% if files_qs.exists %}
+  <div class="list-group">
+    {% for f in files_qs %}
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <strong>{{ f.filename }}</strong><br>
+            <small>Owner: {{ f.owner.full_name }} ({{ f.owner.email }})</small><br>
+            <small>Uploaded at: {{ f.created_at }}</small>
+          </div>
+
+          <div>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'download_file' f.id %}">Download</a>
+
+            {% if can_edit %}
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'edit_file' f.id %}">Edit</a>
+            {% endif %}
+
+            {% if can_delete %}
+              <form method="post" action="{% url 'delete_file' f.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete file?')">Delete</button>
+              </form>
+            {% endif %}
+
+            {% if can_chat %}
+              <a class="btn btn-sm btn-outline-success" href="{% url 'chat_with_user' f.owner.id %}">Chat</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">No files found.</div>
+{% endif %}
+{% endblock %}

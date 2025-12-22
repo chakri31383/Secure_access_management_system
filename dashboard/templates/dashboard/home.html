@@ -1,0 +1,9 @@
+{% extends 'accounts/base.html' %}
+
+{% block content %}
+    <h3>Project Dashboard</h3>
+    <p>Welcome to the project. Please log in or sign up to continue.</p>
+
+    <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+    <a href="{% url 'signup' %}" class="btn btn-secondary">Sign Up</a>
+{% endblock %}

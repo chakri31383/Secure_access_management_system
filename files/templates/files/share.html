@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-4">
+  <h3>Share File</h3>
+  <p>Share link for <strong>{{ file.filename }}</strong></p>
+  {% if file.shared_link %}
+    <div class="input-group mb-3" style="max-width:720px;">
+      <input id="shareLink" class="form-control" value="{{ file.shared_link }}" readonly>
+      <button class="btn btn-outline-secondary" id="copyBtn">Copy</button>
+    </div>
+  {% else %}
+    <p class="text-muted">No share link available.</p>
+  {% endif %}
+
+  <a href="{% url 'files:list' %}" class="btn btn-secondary">Back to files</a>
+</div>
+
+<script>
+document.getElementById('copyBtn')?.addEventListener('click', function(){
+  const el = document.getElementById('shareLink');
+  el.select();
+  navigator.clipboard.writeText(el.value).then(()=> {
+    alert('Copied to clipboard');
+  });
+});
+</script>
+{% endblock %}
