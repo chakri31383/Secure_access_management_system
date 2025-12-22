@@ -1,10 +1,120 @@
-The fast implementation of digital channels in the organizational processes caused growing concerns regarding the safe data management, privileged access, and real-time teamwork. 
-To fulfill these requirements, this project proposes a Secure Privileged Access Management System that would simplify the process of sharing files in the organization, granting roles and permissions and team-based interactions in a single platform. 
-The system has a multi-level access that is multi-tiered (main admin, organization-admin, faculty, student and general users) with clearly defined privileges to give it both security and operational flexibility. 
-This architecture gives companies the ability to utilize their resources in the most effective way possible and also to keep a tight rein on sensitive processes.
-One of the main features of this platform is that it includes AI-powered anomaly detection. The system is designed to actively detect suspicious or unauthorized activities through the application of machine learning technology, whereby user logs (like file downloads, logins, sharing, and other user activities) are observed to determine suspicious or unauthorized users. 
-In case of attractive anomalies being noticed like mass downloads or repetitive access failures, the AI engine can block the offending user automatically, record the incident, and alert the administrators. Not only does this mitigate the chances of data breaches but also puts the platform in proactive security management with intelligent automation to provide robust threat mitigation.
-Besides its security measures, the platform features an intelligent FAQ chatbot that is trained on a knowledge base of policies and answers on technical support and workflow advice in an organization that has been curated. This AI chatbot will be able to help users in real time implementing answers to frequent questions regarding file management, role duties, system navigation, and troubleshooting guidance. 
-The addition of real-time group chat also increases the level of collaboration, allowing all roles within the organization to communicate smoothly without interruptions of privacy and access control by user roles.
-The Secure Privileged Access Management System offers a comprehensive solution to the current organizations that would need to compromise on productivity and security because of their modular design, high security AI layer, and user-centered interface.
-The versatile and adaptable structure of the system preconditions its use in educational institutions, companies, and other areas where the highest importance is given to the controlled sharing and monitoring of digital resources. Automating the detection of anomalies and allowing communication to be effective, this work is a huge leap in the direction of secure, intelligent, and collaborative management of the digital workplace.
+Step-by-Step Django Project Setup Guide
+🪄 1. Create a Virtual Environment
+
+This keeps your project dependencies isolated.
+
+Windows:
+python -m venv venv
+
+Mac/Linux:
+python3 -m venv venv
+
+⚡ 2. Activate the Virtual Environment
+Windows (Command Prompt or PowerShell):
+venv\Scripts\activate
+
+Mac/Linux:
+source venv/bin/activate
+
+
+✅ You should now see (venv) at the beginning of your terminal prompt.
+
+⚙️ 3. Install Required Packages
+
+If you have a requirements.txt file:
+
+pip install -r requirements.txt
+
+
+If not, install manually:
+
+pip install django
+pip install pillow
+pip install djangorestframework
+pip install mysqlclient   # (Skip this if using SQLite)
+
+✉️ 4. Configure Email for OTP (in settings.py)
+
+Open your Django project’s settings.py file and add or update the following lines:
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your_gmail@gmail.com'
+EMAIL_HOST_PASSWORD = 'your_app_password'  # Use Gmail App Password
+
+⚠️ Important:
+
+Do not use your regular Gmail password.
+
+Generate an App Password:
+
+Go to https://myaccount.google.com/apppasswords
+
+Choose your Gmail account.
+
+Select Mail → Windows.
+
+Copy the 16-character password and paste it in EMAIL_HOST_PASSWORD.
+
+🧱 5. Database Setup
+✅ If using SQLite (Default)
+
+You can skip this step — Django automatically handles it.
+
+🐬 If using MySQL
+
+Edit your settings.py:
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'secure_access_db',
+        'USER': 'root',
+        'PASSWORD': 'yourpassword',
+        'HOST': 'localhost',
+        'PORT': '3306',
+    }
+}
+
+
+Then, create the database in MySQL:
+
+CREATE DATABASE secure_access_db;
+
+🏗 6. Run Migrations
+
+Create and apply all necessary database tables.
+
+python manage.py makemigrations
+python manage.py migrate
+
+👤 7. Create an Admin (Superuser)
+
+This lets you access the Django admin panel.
+
+python manage.py createsuperuser
+
+
+Then follow the prompts:
+
+Enter username
+
+Enter email
+
+Enter password
+
+🌍 8. Run the Development Server
+
+Start your Django project locally:
+
+python manage.py runserver
+
+
+Now open your browser and go to:
+
+http://127.0.0.1:8000/
+
+
+✅ You should now see your home/login page.
