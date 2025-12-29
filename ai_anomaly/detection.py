@@ -202,72 +202,71 @@ import os
 import pickle
 import numpy as np
 from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
 from django.conf import settings
 
-MODEL_DIR = os.path.join(settings.BASE_DIR, "ai_anomaly")
-MODEL_PATH = os.path.join(MODEL_DIR, "anomaly_model.pkl")
+MODEL_DIR = os.path.join(settings.BASE_DIR, "ai_anomaly", "model")
+MODEL_PATH = os.path.join(MODEL_DIR, "iforest.pkl")
+SCALER_PATH = os.path.join(MODEL_DIR, "scaler.pkl")
 
 
-def ensure_model_dir():
-    if not os.path.exists(MODEL_DIR):
-        os.makedirs(MODEL_DIR)
+def ensure_dir():
+    os.makedirs(MODEL_DIR, exist_ok=True)
 
 
-# -----------------------------
-# TRAIN MODEL
-# -----------------------------
 def train_anomaly_model(activity_queryset):
-    """
-    Train Isolation Forest using real user activity data
-    activity_queryset: QuerySet of UserActivity
-    """
-    if activity_queryset.count() < 20:
-        # Not enough data to train
+    print("🔍 AI TRAINING STARTED")
+    print("Total rows:", activity_queryset.count())
+
+    if activity_queryset.count() < 5:
+        print("❌ Not enough data to train")
         return None
 
-    X = np.array([
-        [a.downloads, a.files, a.failed_logins]
-        for a in activity_queryset
-    ])
+    X = np.array([a.feature_vector() for a in activity_queryset])
+    print("Feature matrix shape:", X.shape)
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
 
     model = IsolationForest(
-        n_estimators=150,
-        contamination=0.05,   # assume ~5% abnormal
+        n_estimators=200,
+        contamination=0.05,
         random_state=42
     )
+    model.fit(X_scaled)
 
-    model.fit(X)
+    ensure_dir()
 
-    ensure_model_dir()
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(model, f)
+    with open(SCALER_PATH, "wb") as f:
+        pickle.dump(scaler, f)
+
+    print("✅ MODEL SAVED AT:", MODEL_PATH)
+    print("✅ SCALER SAVED AT:", SCALER_PATH)
 
     return model
 
 
-# -----------------------------
-# LOAD MODEL
-# -----------------------------
-def load_anomaly_model():
+def load_model():
     if not os.path.exists(MODEL_PATH):
-        return None
+        return None, None
+
     with open(MODEL_PATH, "rb") as f:
-        return pickle.load(f)
+        model = pickle.load(f)
+    with open(SCALER_PATH, "rb") as f:
+        scaler = pickle.load(f)
+
+    return model, scaler
 
 
-# -----------------------------
-# PREDICT
-# -----------------------------
-def predict_anomaly(downloads, files, failed_logins):
-    """
-    Returns True if anomaly detected, else False
-    """
-    model = load_anomaly_model()
+def predict_anomaly(feature_vector):
+    model, scaler = load_model()
     if model is None:
-        return False  # fail-safe
+        return False, 0.0
 
-    features = np.array([[downloads, files, failed_logins]])
-    prediction = model.predict(features)
+    X = scaler.transform([feature_vector])
+    prediction = model.predict(X)
+    risk = -model.score_samples(X)[0]
 
-    # -1 => anomaly, 1 => normal
-    return prediction[0] == -1
+    return prediction[0] == -1, round(risk, 3)

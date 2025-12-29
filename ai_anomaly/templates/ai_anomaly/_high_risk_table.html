@@ -1,0 +1,75 @@
+<div class="table-responsive">
+  <table class="table table-hover align-middle mb-0">
+    <thead class="table-light">
+      <tr>
+        <th>User</th>
+        <th>Downloads</th>
+        <th>Files</th>
+        <th>Failed Logins</th>
+        <th>Risk Score</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for r in high_risk %}
+      <tr class="{% if r.risk >= 0.65 %}table-danger{% else %}table-warning{% endif %}">
+
+        <!-- USER -->
+        <td>
+          <strong>{{ r.user.email }}</strong><br>
+          <small class="text-muted">ID: {{ r.user.id }}</small>
+        </td>
+
+        <!-- METRICS -->
+        <td>{{ r.downloads }}</td>
+        <td>{{ r.files }}</td>
+        <td>{{ r.failed }}</td>
+
+        <!-- RISK -->
+        <td>
+          <span class="badge bg-danger">
+            {{ r.risk }}
+          </span>
+        </td>
+
+        <!-- STATUS -->
+        <td>
+          {% if r.user.is_blocked %}
+            <span class="badge bg-danger">Blocked</span>
+          {% else %}
+            <span class="badge bg-warning text-dark">At Risk</span>
+          {% endif %}
+        </td>
+
+        <!-- ACTION -->
+        <td>
+          {% if r.user.is_blocked %}
+            <form method="post" action="{% url 'ai_anomaly:unblock_user' r.user.id %}">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-success">
+                Unblock
+              </button>
+            </form>
+          {% else %}
+            <form method="post" action="{% url 'ai_anomaly:block_user' r.user.id %}">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-danger">
+                Block
+              </button>
+            </form>
+          {% endif %}
+        </td>
+
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="text-center text-muted py-4">
+          ✅ No high-risk users detected
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

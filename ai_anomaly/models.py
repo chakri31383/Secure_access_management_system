@@ -25,14 +25,15 @@
 #     created_at = models.DateTimeField(auto_now_add=True)
 # ai_anomaly/models.py
 
+
+
 from django.db import models
 from django.conf import settings
 
 
 class UserActivity(models.Model):
     """
-    Stores user behavior metrics used for AI-based anomaly detection.
-    Each record represents activity aggregated over a short time window.
+    Aggregated user behavior over a short time window
     """
 
     user = models.ForeignKey(
@@ -49,31 +50,21 @@ class UserActivity(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        verbose_name = "User Activity"
-        verbose_name_plural = "User Activities"
 
     def __str__(self):
-        return (
-            f"{self.user.email} | "
-            f"D:{self.downloads} "
-            f"F:{self.files} "
-            f"FL:{self.failed_logins} "
-            f"@ {self.created_at.strftime('%Y-%m-%d %H:%M')}"
-        )
+        return f"{self.user.email} | D:{self.downloads} F:{self.files} FL:{self.failed_logins}"
 
-    @property
     def feature_vector(self):
         """
-        Returns activity as a feature vector for ML models
+        Behavioral relationship features
         """
-        return [self.downloads, self.files, self.failed_logins]
+        downloads_per_file = self.downloads / max(self.files, 1)
+        failed_login_ratio = self.failed_logins / max(self.downloads + self.files, 1)
 
-    def is_suspicious(self, threshold=40):
-        """
-        Simple rule-based check (fallback / demo support)
-        """
-        return (
-            self.downloads > threshold or
-            self.files > threshold or
-            self.failed_logins > threshold
-        )
+        return [
+            self.downloads,
+            self.files,
+            self.failed_logins,
+            downloads_per_file,
+            failed_login_ratio
+        ]

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-4">
+
+  <h3>AI Anomaly Dashboard</h3>
+  <small class="text-muted">Behavioral risk monitoring using Isolation Forest</small>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} mt-3">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- STATS -->
+  <div class="row mt-4 g-3">
+    <div class="col-md-3"><div class="card p-3">Total Users<h4>{{ total_users }}</h4></div></div>
+    <div class="col-md-3"><div class="card p-3">Events<h4>{{ total_events }}</h4></div></div>
+    <div class="col-md-3"><div class="card p-3">Anomalies<h4 class="text-danger">{{ anomaly_count }}</h4></div></div>
+    <div class="col-md-3"><div class="card p-3">Blocked<h4>{{ blocked_users }}</h4></div></div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="card mt-4 p-3">
+    <h5>⚙ AI Controls</h5>
+    <div class="d-flex gap-2">
+      <form method="post" action="{% url 'ai_anomaly:dashboard_train' %}">{% csrf_token %}
+        <button class="btn btn-warning">Train AI</button>
+      </form>
+      <form method="post" action="{% url 'ai_anomaly:dashboard_detect' %}">{% csrf_token %}
+        <button class="btn btn-primary">Run Detection</button>
+      </form>
+      <form method="post" action="{% url 'ai_anomaly:dashboard_generate' %}">{% csrf_token %}
+        <button class="btn btn-danger">Generate Test Data</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- HIGH RISK USERS -->
+  <div class="card mt-4">
+    <div class="card-header">🚨 High Risk Users</div>
+    <div class="card-body p-0">
+      {% include "ai_anomaly/_high_risk_table.html" %}
+    </div>
+  </div>
+
+  <!-- LOGS -->
+  <div class="card mt-4">
+    <div class="card-header">🧾 Recent AI Decisions</div>
+    <ul class="list-group list-group-flush">
+      {% for log in recent_logs %}
+        <li class="list-group-item">{{ log.timestamp }} — {{ log.action }}</li>
+      {% empty %}
+        <li class="list-group-item text-muted">No logs yet</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+</div>
+
+{% endblock %}
