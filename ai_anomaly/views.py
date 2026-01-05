@@ -162,24 +162,155 @@
 #     # plain POST from form -> render small page or redirect back
 #     return render(request, 'ai_anomaly/test_pattern_results.html', {'results': results})
 #ai_anomaly/views.py
+#
+# from django.shortcuts import render, redirect
+# from django.contrib.auth.decorators import login_required
+# from django.contrib import messages
+# from django.views.decorators.http import require_POST
+# from django.utils.timezone import now, timedelta
+#
+# from accounts.models import User
+# from dashboard.models import ActivityLog
+# from .models import UserActivity
+# from .detection import train_anomaly_model, predict_anomaly
+#
+#
+# @login_required
+# def ai_dashboard(request):
+#     if request.user.role != "MainAdmin":
+#         messages.error(request, "Access denied.")
+#         return redirect("dashboard_home")
+#
+#     last_24h = now() - timedelta(hours=24)
+#     activities = UserActivity.objects.filter(created_at__gte=last_24h)
+#
+#     total_events = activities.count()
+#     total_users = activities.values("user").distinct().count()
+#     blocked_users = User.objects.filter(is_blocked=True).count()
+#
+#     high_risk = []
+#     anomalies = 0
+#
+#     for a in activities:
+#         is_anomaly, risk = predict_anomaly(a.feature_vector())
+#         if is_anomaly:
+#             anomalies += 1
+#         if risk > 0.65:
+#             high_risk.append({
+#                 "user": a.user,  # ✅ FULL USER OBJECT
+#                 "downloads": a.downloads,
+#                 "files": a.files,
+#                 "failed": a.failed_logins,
+#                 "risk": risk
+#             })
+#
+#     context = {
+#         "total_users": total_users,
+#         "total_events": total_events,
+#         "anomaly_count": anomalies,
+#         "blocked_users": blocked_users,
+#         "high_risk": sorted(high_risk, key=lambda x: x["risk"], reverse=True),
+#         "recent_logs": ActivityLog.objects.order_by("-timestamp")[:10],
+#     }
+#
+#     return render(request, "ai_anomaly/dashboard.html", context)
+#
+#
+# # ------------------ DASHBOARD ACTIONS ------------------
+#
+# @login_required
+# @require_POST
+# def dashboard_train(request):
+#     train_anomaly_model(UserActivity.objects.all())
+#     messages.success(request, "🤖 AI model trained successfully.")
+#     ActivityLog.objects.create(user=request.user, action="AI model trained")
+#     return redirect("ai_anomaly:dashboard")
+#
+#
+# @login_required
+# @require_POST
+# def dashboard_detect(request):
+#     if request.user.role != "MainAdmin":
+#         messages.error(request, "Access denied.")
+#         return redirect("ai_anomaly:dashboard")
+#
+#     flagged = 0
+#     blocked = 0
+#
+#     activities = UserActivity.objects.select_related("user")
+#
+#     for a in activities:
+#         is_anomaly, risk = predict_anomaly(a.feature_vector())
+#
+#         if is_anomaly:
+#             flagged += 1
+#
+#             # 🚨 AUTO-BLOCK POLICY
+#             if risk >= 0.65 and not a.user.is_blocked:
+#                 a.user.is_blocked = True
+#                 a.user.save(update_fields=["is_blocked"])
+#                 blocked += 1
+#
+#                 ActivityLog.objects.create(
+#                     user=a.user,
+#                     action=f"User auto-blocked by AI | Risk={risk}"
+#                 )
+#
+#     messages.success(
+#         request,
+#         f"Detection complete → {flagged} anomalies, {blocked} users blocked."
+#     )
+#
+#     ActivityLog.objects.create(
+#         user=request.user,
+#         action=f"AI detection run | {flagged} anomalies | {blocked} blocked"
+#     )
+#
+#     return redirect("ai_anomaly:dashboard")
+#
+#
+#
+# @login_required
+# @require_POST
+# def dashboard_generate(request):
+#     patterns = [
+#         (5, 5, 0),
+#         (45, 3, 0),
+#         (2, 50, 0),
+#         (1, 1, 55),
+#     ]
+#
+#     for d, f, fl in patterns:
+#         UserActivity.objects.create(
+#             user=request.user,
+#             downloads=d,
+#             files=f,
+#             failed_logins=fl
+#         )
+#
+#     messages.success(request, "🧪 Test anomaly data generated.")
+#     return redirect("ai_anomaly:dashboard")
 
-from django.shortcuts import render, redirect
+
+
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.contrib import messages
 from django.views.decorators.http import require_POST
+from django.contrib import messages
 from django.utils.timezone import now, timedelta
+from django.db.models import Sum
 
 from accounts.models import User
 from dashboard.models import ActivityLog
 from .models import UserActivity
-from .detection import train_anomaly_model, predict_anomaly
+from .detection import train_anomaly_model_from_matrix, predict_anomaly
 
 
 @login_required
 def ai_dashboard(request):
     if request.user.role != "MainAdmin":
         messages.error(request, "Access denied.")
-        return redirect("dashboard_home")
+        return redirect("dashboard:dashboard_home")
 
     last_24h = now() - timedelta(hours=24)
     activities = UserActivity.objects.filter(created_at__gte=last_24h)
@@ -191,42 +322,93 @@ def ai_dashboard(request):
     high_risk = []
     anomalies = 0
 
-    for a in activities:
-        is_anomaly, risk = predict_anomaly(a.feature_vector())
-        if is_anomaly:
+    for a in activities.select_related("user"):
+        is_anom, risk = predict_anomaly(a.feature_vector())
+        if is_anom:
             anomalies += 1
-        if risk > 0.65:
+        if risk >= 0.65:
             high_risk.append({
-                "user": a.user,  # ✅ FULL USER OBJECT
+                "user": a.user,
                 "downloads": a.downloads,
                 "files": a.files,
                 "failed": a.failed_logins,
                 "risk": risk
             })
 
-    context = {
+    return render(request, "ai_anomaly/dashboard.html", {
         "total_users": total_users,
         "total_events": total_events,
         "anomaly_count": anomalies,
         "blocked_users": blocked_users,
         "high_risk": sorted(high_risk, key=lambda x: x["risk"], reverse=True),
         "recent_logs": ActivityLog.objects.order_by("-timestamp")[:10],
-    }
-
-    return render(request, "ai_anomaly/dashboard.html", context)
+    })
 
 
-# ------------------ DASHBOARD ACTIONS ------------------
+# ---------- TRAIN ----------
+
+def build_training_matrix():
+    qs = (
+        UserActivity.objects
+        .filter(user__role__in=["User", "OrgAdmin"])
+        .values("user")
+        .annotate(
+            downloads=Sum("downloads"),
+            files=Sum("files"),
+            failed=Sum("failed_logins"),
+        )
+    )
+
+    X = []
+    for r in qs:
+        d, f, fl = r["downloads"], r["files"], r["failed"]
+        dpf = d / max(f, 1)
+        fr = fl / max(d + f, 1)
+        X.append([d, f, fl, dpf, fr])
+
+    return X
+
 
 @login_required
 @require_POST
 def dashboard_train(request):
-    train_anomaly_model(UserActivity.objects.all())
-    messages.success(request, "🤖 AI model trained successfully.")
+    X = build_training_matrix()
+
+    if len(X) < 5:
+        messages.error(request, "Not enough distinct users to train AI.")
+        return redirect("ai_anomaly:dashboard")
+
+    train_anomaly_model_from_matrix(X)
     ActivityLog.objects.create(user=request.user, action="AI model trained")
+    messages.success(request, "🤖 AI model trained successfully.")
     return redirect("ai_anomaly:dashboard")
 
 
+# ---------- GENERATE DATA ----------
+
+@login_required
+@require_POST
+def dashboard_generate(request):
+    users = User.objects.filter(role__in=["User", "OrgAdmin"], is_blocked=False)
+
+    patterns = [
+        (5, 5, 0),
+        (45, 3, 0),
+        (2, 50, 0),
+        (1, 1, 55),
+    ]
+
+    for user in users:
+        for d, f, fl in patterns:
+            UserActivity.objects.create(
+                user=user,
+                downloads=d,
+                files=f,
+                failed_logins=fl
+            )
+
+    messages.success(request, "🧪 Multi-user AI test data generated.")
+    return redirect("ai_anomaly:dashboard")
 @login_required
 @require_POST
 def dashboard_detect(request):
@@ -245,7 +427,6 @@ def dashboard_detect(request):
         if is_anomaly:
             flagged += 1
 
-            # 🚨 AUTO-BLOCK POLICY
             if risk >= 0.65 and not a.user.is_blocked:
                 a.user.is_blocked = True
                 a.user.save(update_fields=["is_blocked"])
@@ -253,43 +434,22 @@ def dashboard_detect(request):
 
                 ActivityLog.objects.create(
                     user=a.user,
-                    action=f"User auto-blocked by AI | Risk={risk}"
+                    action=f"AI auto-blocked user | Risk={risk}"
                 )
-
-    messages.success(
-        request,
-        f"Detection complete → {flagged} anomalies, {blocked} users blocked."
-    )
 
     ActivityLog.objects.create(
         user=request.user,
         action=f"AI detection run | {flagged} anomalies | {blocked} blocked"
     )
 
+    messages.success(
+        request,
+        f"Detection complete → {flagged} anomalies, {blocked} users blocked."
+    )
+
     return redirect("ai_anomaly:dashboard")
 
 
-
-@login_required
-@require_POST
-def dashboard_generate(request):
-    patterns = [
-        (5, 5, 0),
-        (45, 3, 0),
-        (2, 50, 0),
-        (1, 1, 55),
-    ]
-
-    for d, f, fl in patterns:
-        UserActivity.objects.create(
-            user=request.user,
-            downloads=d,
-            files=f,
-            failed_logins=fl
-        )
-
-    messages.success(request, "🧪 Test anomaly data generated.")
-    return redirect("ai_anomaly:dashboard")
 from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required

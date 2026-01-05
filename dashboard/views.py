@@ -118,52 +118,31 @@ def dashboard_home(request):
     user = request.user
     ActivityLog.objects.create(user=user, action="Visited Dashboard")
 
-
-    # MAIN ADMIN
+    # MAIN ADMIN → redirect
     if user.role == "MainAdmin":
-        orgs = Organization.objects.all()
-        return render(request, 'dashboard/admin_dashboard.html', {'orgs': orgs})
+        return redirect("dashboard:admin_dashboard")
 
     # ORG ADMIN
     elif user.role == "OrgAdmin":
-        roles = Role.objects.filter(org_id=user.org_id)
-        return redirect('dashboard:org_dashboard')
+        return redirect("dashboard:org_dashboard")
 
     # NORMAL USER
     else:
-        # if user already belongs to an org
         user_org = None
         if user.org_id:
             user_org = Organization.objects.filter(id=user.org_id).first()
 
-        # all join requests by user
         user_requests = JoinRequest.objects.filter(user=user).order_by('-created_at')
-
-        # has pending request?
-        has_pending = user_requests.filter(status='pending').exists()
-
-        # can request to join?
-        can_request_join = (user.org_id is None and not has_pending)
-        user_requests = JoinRequest.objects.filter(user=user).order_by('-created_at')
-
-        # status flags
         has_pending = user_requests.filter(status='pending').exists()
         can_request_join = (user.org_id is None and not has_pending)
 
-        # files and activity for the user dashboard
         user_files_qs = File.objects.filter(owner=user).order_by('-created_at')
         user_files_count = user_files_qs.count()
-        # show the latest 6 files on dashboard
         user_files = list(user_files_qs[:6])
 
-        # recent activity log entries (for this user)
         recent_logs = ActivityLog.objects.filter(user=user).order_by('-timestamp')[:6]
 
         return render(request, 'dashboard/user_dashboard.html', {
-            'user_org': user_org,
-            'user_requests': user_requests,
-            'has_pending': has_pending,
-            'can_request_join': can_request_join,
             'user_org': user_org,
             'user_requests': user_requests,
             'has_pending': has_pending,
@@ -172,10 +151,6 @@ def dashboard_home(request):
             'user_files': user_files,
             'recent_logs': recent_logs,
         })
-
-
-
-
 
 
 
@@ -1034,3 +1009,85 @@ def org_detail(request, org_id):
     }
 
     return render(request, 'dashboard/org_detail.html', context)
+# from django.views.decorators.http import require_POST
+# from django.shortcuts import get_object_or_404, redirect
+# from django.contrib import messages
+# from django.contrib.auth.decorators import login_required
+#
+# from accounts.models import User
+# from dashboard.models import ActivityLog
+
+
+# @login_required
+# @require_POST
+# def disable_user(request, user_id):
+#     # Permission check
+#     if request.user.role.lower() != "MainAdmin":
+#         messages.error(request, "Access denied.")
+#         return redirect("dashboard:admin_dashboard")
+#
+#     target = get_object_or_404(User, id=user_id)
+#
+#     if target.is_blocked:
+#         messages.info(request, "User is already blocked.")
+#         return redirect("dashboard:admin_dashboard")
+#
+#     target.is_blocked = True
+#     target.save(update_fields=["is_blocked"])
+#
+#     ActivityLog.objects.create(
+#         user=request.user,
+#         action=f"Disabled user {target.email}"
+#     )
+#
+#     messages.success(request, f"🚫 {target.email} has been blocked.")
+#     return redirect("dashboard:admin_dashboard")
+#
+#
+# @login_required
+# @require_POST
+# def enable_user(request, user_id):
+#     if request.user.role.lower() != "MainAdmin":
+#         messages.error(request, "Access denied.")
+#         return redirect("dashboard:admin_dashboard")
+#
+#     target = get_object_or_404(User, id=user_id)
+#
+#     if not target.is_blocked:
+#         messages.info(request, "User is already active.")
+#         return redirect("dashboard:admin_dashboard")
+#
+#     target.is_blocked = False
+#     target.save(update_fields=["is_blocked"])
+#
+#     ActivityLog.objects.create(
+#         user=request.user,
+#         action=f"Enabled user {target.email}"
+#     )
+#
+#     messages.success(request, f"✅ {target.email} has been unblocked.")
+#     return redirect("dashboard:admin_dashboard")
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views.decorators.http import require_POST
+from accounts.models import User
+
+def is_main_admin(user):
+    return user.is_authenticated and user.role == "MainAdmin"
+
+@login_required
+@user_passes_test(is_main_admin)
+@require_POST
+def toggle_user_block(request, user_id):
+    print("🔥 TOGGLE VIEW HIT 🔥", user_id)
+
+    user = get_object_or_404(User, id=user_id)
+
+    # Prevent admin blocking themselves
+    if user == request.user:
+        return redirect(request.META.get("HTTP_REFERER", "/"))
+
+    user.is_blocked = not user.is_blocked
+    user.save(update_fields=["is_blocked"])
+
+    return redirect(request.META.get("HTTP_REFERER", "/"))

@@ -25,4 +25,7 @@ urlpatterns = [
     path('files/<int:file_id>/edit/', views.edit_file, name='edit_file'),
     path('files/<int:file_id>/delete/', views.delete_file, name='delete_file'),
     path('files/<int:file_id>/download/', views.download_file, name='download_file'),
+    # path("user/<int:user_id>/disable/", views.disable_user, name="disable_user"),
+    # path("user/<int:user_id>/enable/", views.enable_user, name="enable_user"),
+    path("user/<int:user_id>/toggle-block/", views.toggle_user_block, name="toggle_user_block"),
 ]

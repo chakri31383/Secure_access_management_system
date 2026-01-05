@@ -197,6 +197,80 @@
 #     # 4) show store
 #     print("Activity store snapshot:", get_all_activity())
 # ai_anomaly/detection.py
+#
+# import os
+# import pickle
+# import numpy as np
+# from sklearn.ensemble import IsolationForest
+# from sklearn.preprocessing import StandardScaler
+# from django.conf import settings
+#
+# MODEL_DIR = os.path.join(settings.BASE_DIR, "ai_anomaly", "model")
+# MODEL_PATH = os.path.join(MODEL_DIR, "iforest.pkl")
+# SCALER_PATH = os.path.join(MODEL_DIR, "scaler.pkl")
+#
+#
+# def ensure_dir():
+#     os.makedirs(MODEL_DIR, exist_ok=True)
+#
+#
+# def train_anomaly_model(activity_queryset):
+#     print("🔍 AI TRAINING STARTED")
+#     print("Total rows:", activity_queryset.count())
+#
+#     if activity_queryset.count() < 5:
+#         print("❌ Not enough data to train")
+#         return None
+#
+#     X = np.array([a.feature_vector() for a in activity_queryset])
+#     print("Feature matrix shape:", X.shape)
+#
+#     scaler = StandardScaler()
+#     X_scaled = scaler.fit_transform(X)
+#
+#     model = IsolationForest(
+#         n_estimators=200,
+#         contamination=0.05,
+#         random_state=42
+#     )
+#     model.fit(X_scaled)
+#
+#     ensure_dir()
+#
+#     with open(MODEL_PATH, "wb") as f:
+#         pickle.dump(model, f)
+#     with open(SCALER_PATH, "wb") as f:
+#         pickle.dump(scaler, f)
+#
+#     print("✅ MODEL SAVED AT:", MODEL_PATH)
+#     print("✅ SCALER SAVED AT:", SCALER_PATH)
+#
+#     return model
+#
+#
+# def load_model():
+#     if not os.path.exists(MODEL_PATH):
+#         return None, None
+#
+#     with open(MODEL_PATH, "rb") as f:
+#         model = pickle.load(f)
+#     with open(SCALER_PATH, "rb") as f:
+#         scaler = pickle.load(f)
+#
+#     return model, scaler
+#
+#
+# def predict_anomaly(feature_vector):
+#     model, scaler = load_model()
+#     if model is None:
+#         return False, 0.0
+#
+#     X = scaler.transform([feature_vector])
+#     prediction = model.predict(X)
+#     risk = -model.score_samples(X)[0]
+#
+#     return prediction[0] == -1, round(risk, 3)
+
 
 import os
 import pickle
@@ -214,16 +288,11 @@ def ensure_dir():
     os.makedirs(MODEL_DIR, exist_ok=True)
 
 
-def train_anomaly_model(activity_queryset):
-    print("🔍 AI TRAINING STARTED")
-    print("Total rows:", activity_queryset.count())
-
-    if activity_queryset.count() < 5:
-        print("❌ Not enough data to train")
+def train_anomaly_model_from_matrix(X):
+    if len(X) < 5:
         return None
 
-    X = np.array([a.feature_vector() for a in activity_queryset])
-    print("Feature matrix shape:", X.shape)
+    X = np.array(X)
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
@@ -241,9 +310,6 @@ def train_anomaly_model(activity_queryset):
         pickle.dump(model, f)
     with open(SCALER_PATH, "wb") as f:
         pickle.dump(scaler, f)
-
-    print("✅ MODEL SAVED AT:", MODEL_PATH)
-    print("✅ SCALER SAVED AT:", SCALER_PATH)
 
     return model
 
@@ -266,7 +332,7 @@ def predict_anomaly(feature_vector):
         return False, 0.0
 
     X = scaler.transform([feature_vector])
-    prediction = model.predict(X)
+    pred = model.predict(X)
     risk = -model.score_samples(X)[0]
 
-    return prediction[0] == -1, round(risk, 3)
+    return pred[0] == -1, round(risk, 3)

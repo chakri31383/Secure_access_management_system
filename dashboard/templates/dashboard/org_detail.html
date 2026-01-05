@@ -1,8 +1,15 @@
 {% extends "accounts/base.html" %}
+{% block title %}Organization Details{% endblock %}
 {% block content %}
-<div class="container py-4">
-  <a href="{% url 'dashboard:admin_dashboard' %}" class="btn btn-outline-secondary mb-3">&larr; Back</a>
 
+<div class="container py-4">
+
+  <!-- Back -->
+  <a href="{% url 'dashboard:admin_dashboard' %}" class="btn btn-outline-secondary mb-3">
+    &larr; Back
+  </a>
+
+  <!-- Organization info -->
   <div class="card mb-4 shadow-sm">
     <div class="card-body">
       <h3 class="card-title mb-1">{{ org.name }}</h3>
@@ -18,13 +25,13 @@
     </div>
   </div>
 
-  <!-- stats -->
+  <!-- Stats -->
   <div class="row mb-4">
     <div class="col-md-4">
       <div class="card shadow-sm">
         <div class="card-body">
-          <h6 class="card-subtitle text-muted">Members</h6>
-          <h2 class="mt-2">{{ members_count }}</h2>
+          <h6 class="text-muted">Members</h6>
+          <h2>{{ members_count }}</h2>
           {% if blocked_count %}
             <small class="text-danger">{{ blocked_count }} blocked</small>
           {% endif %}
@@ -35,8 +42,8 @@
     <div class="col-md-4">
       <div class="card shadow-sm">
         <div class="card-body">
-          <h6 class="card-subtitle text-muted">Total Files</h6>
-          <h2 class="mt-2">{{ files_count }}</h2>
+          <h6 class="text-muted">Total Files</h6>
+          <h2>{{ files_count }}</h2>
         </div>
       </div>
     </div>
@@ -44,102 +51,106 @@
     <div class="col-md-4">
       <div class="card shadow-sm">
         <div class="card-body">
-          <h6 class="card-subtitle text-muted">Storage Used</h6>
-          <h2 class="mt-2">{{ total_storage_human }}</h2>
+          <h6 class="text-muted">Storage Used</h6>
+          <h2>{{ total_storage_human }}</h2>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Members list -->
+  <!-- Members -->
   <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-      <strong><i class="bi bi-people-fill"></i> Members in This Organization</strong>
+      <strong>Members in This Organization</strong>
     </div>
     <div class="card-body">
+
       {% if members_count %}
-        <div class="table-responsive">
-          <table class="table align-middle">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Joined</th>
-                <th>Blocked</th>
-                <th class="text-end">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for m in members %}
-              <tr>
-                <td>{{ m.full_name }}</td>
-                <td>{{ m.email }}</td>
-                <td>{{ m.role }}</td>
-                <td>{{ m.created_at|date:"SHORT_DATE_FORMAT" }}</td>
-                <td>
-                  {% if m.is_blocked %}
-                    <span class="badge bg-danger">Blocked</span>
-                  {% else %}
-                    <span class="badge bg-success">Active</span>
-                  {% endif %}
-                </td>
-                <td class="text-end">
-                  {% if is_main_admin %}
-                    <!-- MainAdmin: block/unblock or remove -->
-                    <form method="post" style="display:inline;">
-                      {% csrf_token %}
-                      {% if not m.is_blocked %}
-                        <input type="hidden" name="block_user" value="{{ m.id }}">
-                        <button class="btn btn-outline-danger btn-sm" onclick="return confirm('Block this user?')">Block</button>
-                      {% else %}
-                        <input type="hidden" name="unblock_user" value="{{ m.id }}">
-                        <button class="btn btn-outline-success btn-sm">Unblock</button>
-                      {% endif %}
-                    </form>
-                  {% elif is_org_admin %}
-                    <!-- OrgAdmin: can block (remove org membership) -->
-                    {% if not m.is_blocked %}
-                      <form method="post" style="display:inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="block_user_id" value="{{ m.id }}">
-                        <button class="btn btn-outline-danger btn-sm" onclick="return confirm('Remove user from organization?')">Remove</button>
-                      </form>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Joined</th>
+              <th>Status</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in members %}
+            <tr>
+              <td>{{ m.full_name }}</td>
+              <td>{{ m.email }}</td>
+              <td>{{ m.role }}</td>
+              <td>{{ m.created_at|date:"SHORT_DATE_FORMAT" }}</td>
+              <td>
+                {% if m.is_blocked %}
+                  <span class="badge bg-danger">Blocked</span>
+                {% else %}
+                  <span class="badge bg-success">Active</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                {% if is_main_admin %}
+                  <form method="post"
+                        action="{% url 'dashboard:toggle_user_block' m.id %}"
+                        style="display:inline;">
+                    {% csrf_token %}
+
+                    {% if m.is_blocked %}
+                      <button class="btn btn-outline-success btn-sm">
+                        Unblock
+                      </button>
+                    {% else %}
+                      <button class="btn btn-outline-danger btn-sm"
+                              onclick="return confirm('Block this user?')">
+                        Block
+                      </button>
                     {% endif %}
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+                  </form>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
         <p class="text-muted mb-0">No users in this organization.</p>
       {% endif %}
+
     </div>
   </div>
 
-  <!-- Files list -->
+  <!-- Files -->
   <div class="card mb-4">
     <div class="card-header bg-dark text-white">
-      <strong><i class="bi bi-folder-fill"></i> Files in This Organization</strong>
+      <strong>Files in This Organization</strong>
     </div>
     <div class="card-body">
       {% if files_count %}
         <ul class="list-group">
           {% for f in files %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <strong>{{ f.filename }}</strong>
-                <div class="small text-muted">
-                  By {{ f.owner.full_name }} • {{ f.created_at|date:"SHORT_DATETIME_FORMAT" }}
-                </div>
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ f.filename }}</strong>
+              <div class="small text-muted">
+                By {{ f.owner.full_name }} • {{ f.created_at|date:"SHORT_DATETIME_FORMAT" }}
               </div>
-              <div class="text-end">
-                <a href="{% url 'files:download' f.id %}" class="btn btn-outline-success btn-sm me-1">Download</a>
-                <a href="{% url 'files:edit' f.id %}" class="btn btn-outline-secondary btn-sm me-1">Edit</a>
-              </div>
-            </li>
+            </div>
+            <div>
+              <a href="{% url 'files:download' f.id %}" class="btn btn-outline-success btn-sm me-1">
+                Download
+              </a>
+              <a href="{% url 'files:edit' f.id %}" class="btn btn-outline-secondary btn-sm">
+                Edit
+              </a>
+            </div>
+          </li>
           {% endfor %}
         </ul>
       {% else %}
@@ -148,17 +159,22 @@
     </div>
   </div>
 
-  <!-- Delete org (MainAdmin only) -->
+  <!-- Delete org -->
   {% if is_main_admin %}
   <div class="card mb-4">
     <div class="card-body">
-      <form method="post" onsubmit="return confirm('Delete this organization and all relations? This cannot be undone.')">
+      <form method="post"
+            onsubmit="return confirm('Delete this organization permanently?')">
         {% csrf_token %}
         <input type="hidden" name="delete_org" value="1">
-        <button class="btn btn-danger">Delete Organization</button>
+        <button class="btn btn-danger">
+          Delete Organization
+        </button>
       </form>
     </div>
   </div>
   {% endif %}
+
 </div>
+
 {% endblock %}
